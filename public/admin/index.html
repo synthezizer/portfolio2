@@ -8,6 +8,15 @@
   </head>
   <body>
     <!-- Decap CMS reads ./config.yml and edits the JSON files in /content -->
+    <script>
+      window.CMS_MANUAL_INIT = true;
+    </script>
     <script src="https://unpkg.com/decap-cms@3.17.1/dist/decap-cms.js"></script>
+    <script>
+      // GitHub sign-in runs as a Cloudflare Pages Function on this same site
+      // (functions/api/auth.js), so point Decap at whatever domain we're on:
+      // works on *.pages.dev and a custom domain alike. Merged into config.yml.
+      CMS.init({ config: { backend: { base_url: window.location.origin, auth_endpoint: "api/auth" } } });
+    </script>
   </body>
 </html>

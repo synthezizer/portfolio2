@@ -11,3 +11,7 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+
+# cloudflare local dev
+.wrangler/
+.dev.vars
