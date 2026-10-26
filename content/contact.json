@@ -1,0 +1,13 @@
+{
+  "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat03.jpg/1280px-Cat03.jpg",
+  "alt": "close-up of a ginger cat with amber eyes looking just past the camera",
+  "credit": "photo: Fir0002, GFDL 1.2",
+  "credit_url": "https://commons.wikimedia.org/wiki/File:Cat03.jpg",
+  "intro": "email is the surest way. i usually write back within a day or two.",
+  "channels": [
+    { "label": "email", "value": "hello@example.com", "href": "mailto:hello@example.com", "copy": true },
+    { "label": "instagram", "value": "@yourhandle", "href": "https://instagram.com/yourhandle", "copy": false },
+    { "label": "github", "value": "@yourhandle", "href": "https://github.com/yourhandle", "copy": false },
+    { "label": "discord", "value": "yourhandle", "href": "", "copy": true }
+  ]
+}

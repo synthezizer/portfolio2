@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>andy</title>
+    <meta name="description" content="andy's projects and ways to reach me." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,600;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+    <script>
+      // Hide the stage until the intro takes over; never longer than 3s if JS fails.
+      document.documentElement.classList.add("is-loading");
+      setTimeout(() => document.documentElement.classList.remove("is-loading"), 3000);
+    </script>
+  </head>
+  <body data-view="projects">
+    <header class="topbar">
+      <div class="topbar__track" aria-hidden="true">
+        <span class="topbar__line"></span>
+        <span class="topbar__dot"></span>
+      </div>
+      <a class="topbar__name" href="#projects"><span class="topbar__word">ANDY</span></a>
+    </header>
+
+    <main class="stage">
+      <div class="bracket" aria-hidden="true">
+        <span class="bracket__top"></span>
+        <span class="bracket__side"></span>
+      </div>
+
+      <nav class="nav" aria-label="Main">
+        <a class="nav__link nav__link--projects" href="#projects" data-view="projects">
+          <span class="nav__label"><span class="nav__word">PROJECTS</span></span>
+          <svg class="icon icon--circles" viewBox="0 0 190 90" aria-hidden="true">
+            <g class="circle circle--a">
+              <circle class="circle__outer" cx="45" cy="45" r="45" />
+              <circle class="circle__inner circle__inner--red" cx="66" cy="45" r="22" />
+            </g>
+            <g class="circle circle--b">
+              <circle class="circle__outer" cx="145" cy="45" r="45" />
+              <circle class="circle__inner circle__inner--blue" cx="145" cy="66" r="22" />
+            </g>
+          </svg>
+        </a>
+        <svg class="nav__arrow" viewBox="0 0 60 50" aria-hidden="true">
+          <path d="M4 25h48M30 4l22 21-22 21" fill="none" stroke="currentColor" stroke-width="6" />
+        </svg>
+        <a class="nav__link nav__link--contact" href="#contact" data-view="contact">
+          <span class="nav__label"><span class="nav__word">CONTACT</span></span>
+          <svg class="icon icon--stars" viewBox="0 0 70 70" aria-hidden="true">
+            <path class="star star--big" d="M28 22l5.9 12 13.2 1.9-9.6 9.3 2.3 13.2L28 52.2 16.2 58.4l2.3-13.2-9.6-9.3 13.2-1.9z" />
+            <path class="star star--small" d="M54 2l3.4 6.9 7.6 1.1-5.5 5.4 1.3 7.6-6.8-3.6-6.8 3.6 1.3-7.6-5.5-5.4 7.6-1.1z" />
+          </svg>
+        </a>
+      </nav>
+
+      <section class="view view--projects" id="projects" aria-labelledby="project-title">
+        <div class="media media--project" data-flip-id="hero" aria-hidden="true">
+          <div class="media__fill"></div>
+        </div>
+        <article class="project">
+          <h1 class="project__title" id="project-title"></h1>
+          <time class="project__date"></time>
+          <p class="project__body"></p>
+        </article>
+        <div class="pager">
+          <button class="pager__btn pager__btn--prev" type="button" aria-label="Previous project">
+            <svg viewBox="0 0 34 32" aria-hidden="true"><path d="M0 16L34 0v32z" /></svg>
+          </button>
+          <span class="pager__num" aria-hidden="true"><span class="pager__digit"></span></span>
+          <button class="pager__btn pager__btn--next" type="button" aria-label="Next project">
+            <svg viewBox="0 0 34 32" aria-hidden="true"><path d="M34 16L0 32V0z" /></svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="view view--contact" id="contact" aria-labelledby="contact-title" hidden>
+        <div class="contact">
+          <h1 class="contact__title" id="contact-title">ways to reach me</h1>
+          <div class="contact__body">
+            <p class="contact__intro"></p>
+            <ul class="contact__list"></ul>
+          </div>
+        </div>
+        <div class="media media--contact" data-flip-id="hero" aria-hidden="true">
+          <div class="media__fill"></div>
+        </div>
+      </section>
+
+      <div class="curtain" aria-hidden="true"></div>
+    </main>
+
+    <p class="sr-only" role="status" aria-live="polite" id="status"></p>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

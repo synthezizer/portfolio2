@@ -1,0 +1,13 @@
+# dependencies & build output
+node_modules/
+dist/
+
+# local-only editor/agent settings
+.claude/settings.local.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

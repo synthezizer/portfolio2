@@ -1,0 +1,66 @@
+# Decap CMS: edits the JSON in /content; the site reads it at build time.
+#
+# Local editing (no account needed):
+#   npm run cms        # starts the local Decap backend on :8081
+#   npm run dev        # then open http://localhost:5173/admin/
+#
+# Editing the live site: push this project to GitHub, set `repo` below,
+# and give Decap a login (e.g. host on Netlify and add its GitHub OAuth provider).
+backend:
+  name: github
+  repo: your-github-name/portfolio # TODO: set when the repo exists
+  branch: main
+
+local_backend: true
+
+media_folder: public/images # uploads land here…
+public_folder: /images # …and are referenced like this on the site
+
+collections:
+  - name: projects
+    label: projects
+    label_singular: project
+    folder: content/projects
+    create: true
+    extension: json
+    format: json
+    slug: "{{slug}}"
+    summary: "{{order}} · {{title}}"
+    sortable_fields: [order, title]
+    fields:
+      - { name: title, label: title, widget: string }
+      - { name: order, label: order, widget: number, value_type: int, default: 1, hint: "lower shows first" }
+      - name: date
+        label: date
+        widget: string
+        required: false
+        hint: "MM/DD/YYYY, or leave empty"
+        pattern: ['^(\d{1,2}/\d{1,2}/\d{4})?$', "use MM/DD/YYYY"]
+      - { name: body, label: write-up, widget: text, required: false }
+      - { name: image, label: image, widget: image, required: false, choose_url: true, hint: "fills the blue block" }
+      - { name: alt, label: image description (alt text), widget: string, required: false, hint: "what's in the picture, for screen readers" }
+      - { name: credit, label: image credit, widget: string, required: false, hint: "e.g. photo: name, CC BY-SA 3.0" }
+      - { name: credit_url, label: credit link, widget: string, required: false }
+
+  - name: pages
+    label: pages
+    files:
+      - name: contact
+        label: contact
+        file: content/contact.json
+        fields:
+          - { name: image, label: image, widget: image, required: false, choose_url: true }
+          - { name: alt, label: image description (alt text), widget: string, required: false }
+          - { name: credit, label: image credit, widget: string, required: false }
+          - { name: credit_url, label: credit link, widget: string, required: false }
+          - { name: intro, label: intro line, widget: text, required: false }
+          - name: channels
+            label: ways to reach me
+            label_singular: channel
+            widget: list
+            summary: "{{fields.label}} · {{fields.value}}"
+            fields:
+              - { name: label, label: label, widget: string, hint: "e.g. email" }
+              - { name: value, label: value, widget: string, hint: "what's shown, e.g. hello@example.com" }
+              - { name: href, label: link, widget: string, required: false, hint: "mailto:… or https://… (empty = plain text)" }
+              - { name: copy, label: copy button, widget: boolean, default: false }
