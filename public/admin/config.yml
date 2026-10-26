@@ -4,9 +4,9 @@
 #   npm run cms        # starts the local Decap backend on :8081
 #   npm run dev        # then open http://localhost:5173/admin/
 #
-# Editing the live site (Cloudflare Pages): sign-in goes through GitHub OAuth,
-# handled by functions/api/auth.js + callback.js on the same site. Needs a GitHub
-# OAuth App and GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET set in Cloudflare.
+# Editing the live site (Cloudflare Worker): sign-in goes through GitHub OAuth,
+# handled by worker/auth.js + callback.js on the same site. Needs a GitHub
+# OAuth App and GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET set on the Worker.
 # base_url/auth_endpoint are set at runtime in admin/index.html.
 backend:
   name: github

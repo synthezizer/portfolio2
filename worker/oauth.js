@@ -1,5 +1,4 @@
-// Shared bits for the Decap CMS ↔ GitHub OAuth handshake (Cloudflare Pages Functions).
-// Files starting with "_" aren't routed, so this is import-only.
+// Shared bits for the Decap CMS ↔ GitHub OAuth handshake (Cloudflare Worker).
 
 export const STATE_COOKIE = "decap_oauth_state";
 

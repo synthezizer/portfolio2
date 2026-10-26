@@ -1,5 +1,5 @@
 // GET /api/callback: GitHub redirects here; swap the code for a token and hand it to Decap.
-import { STATE_COOKIE, handshakePage, missingConfig } from "./_oauth.js";
+import { STATE_COOKIE, handshakePage, missingConfig } from "./oauth.js";
 
 export async function onRequestGet({ request, env }) {
   if (missingConfig(env)) {

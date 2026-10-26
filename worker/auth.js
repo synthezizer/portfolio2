@@ -1,6 +1,6 @@
 // GET /api/auth: start GitHub sign-in for Decap CMS.
-// Needs GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET set in Cloudflare Pages → Settings → Variables and Secrets.
-import { STATE_COOKIE, handshakePage, missingConfig } from "./_oauth.js";
+// Needs GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET set on the Worker (Settings → Variables and Secrets).
+import { STATE_COOKIE, handshakePage, missingConfig } from "./oauth.js";
 
 export async function onRequestGet({ request, env }) {
   if (missingConfig(env)) {

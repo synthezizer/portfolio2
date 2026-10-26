@@ -1,0 +1,15 @@
+{
+  // Must match the Worker's name in the Cloudflare dashboard, or Workers Builds rejects the deploy.
+  "name": "portfolio2",
+  "main": "worker/index.js",
+  "compatibility_date": "2025-10-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // only the sign-in routes wake the Worker; everything else is a static file
+    "run_worker_first": ["/api/*"]
+  },
+  // keep variables set in the dashboard (secrets are always kept)
+  "keep_vars": true
+}
