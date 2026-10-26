@@ -2,7 +2,7 @@
 
 Personal portfolio site built with Vite + vanilla JS + GSAP. Two views: Projects (paged) and Contact. Ignore the unrelated `andydaw` folder entirely.
 
-**Content is managed by Decap CMS.** Projects live in `content/projects/*.json` (sorted by `order`), the contact page in `content/contact.json`; `src/content.js` loads them at build time. Admin UI: `public/admin/` (`config.yml` defines the fields). Local editing: `npm run cms` + `npm run dev`, then open `/admin/`. Production login is not set up yet (`backend.repo` is a TODO).
+**Content is managed by Decap CMS.** Projects live in `content/projects/*.json` (sorted by `order`), the contact page in `content/contact.json`; `src/content.js` loads them at build time. Admin UI: `public/admin/` (`config.yml` defines the fields). Local editing: `npm run cms` + `npm run dev`, then open `/admin/`. Repo: github.com/synthezizer/portfolio2 (`main`). Production login (OAuth via the host) is not set up yet.
 
 ## Design Context
 

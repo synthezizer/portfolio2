@@ -8,7 +8,7 @@
 # and give Decap a login (e.g. host on Netlify and add its GitHub OAuth provider).
 backend:
   name: github
-  repo: your-github-name/portfolio # TODO: set when the repo exists
+  repo: synthezizer/portfolio2
   branch: main
 
 local_backend: true
