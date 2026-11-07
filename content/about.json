@@ -1,13 +1,9 @@
 {
-  "title": "ty for visiting!",
-  "from": "seattle, wa ",
-  "body": "I'm Andy, a hobbist programmer currently learning Rust. I wish to learn more as I get better at programming. I also produce underground rage music on the side.",
-  "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Felis_catus-cat_on_snow.jpg/1280px-Felis_catus-cat_on_snow.jpg",
+  "body": "I'm Andy, a 13 year-old hobbyist programmer currently learning Rust. I wish to learn more as I get better at programming. I also produce underground rage music on the side.",
   "alt": "a brown tabby cat walking through deep snow, looking back over its shoulder",
-  "credit": "photo: Von.grzanka, CC BY-SA 3.0",
   "credit_url": "https://commons.wikimedia.org/wiki/File:Felis_catus-cat_on_snow.jpg",
+  "from": "seattle, wa ",
   "discord_id": "1013146627541840063",
-  "show_activity": true,
   "stamps": [
     {
       "image": "/stamps/cat-lover.gif",
@@ -42,5 +38,9 @@
       "alt": "Hack Club",
       "href": "https://hackclub.com/"
     }
-  ]
+  ],
+  "show_activity": true,
+  "title": "welcome!",
+  "credit": "photo: Von.grzanka, CC BY-SA 3.0",
+  "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Felis_catus-cat_on_snow.jpg/1280px-Felis_catus-cat_on_snow.jpg"
 }
