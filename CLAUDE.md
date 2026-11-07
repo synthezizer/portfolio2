@@ -1,8 +1,8 @@
 # Andy — Portfolio
 
-Personal portfolio site built with Vite + vanilla JS + GSAP. Two views: Projects (paged) and Contact. Ignore the unrelated `andydaw` folder entirely.
+Personal portfolio site built with Vite + vanilla JS + GSAP. Three views: Projects (paged), Contact and About. Ignore the unrelated `andydaw` folder entirely.
 
-**Content is managed by Decap CMS.** Projects live in `content/projects/*.json` (sorted by `order`), the contact page in `content/contact.json`; `src/content.js` loads them at build time. Admin UI: `public/admin/` (`config.yml` defines the fields). Local editing: `npm run cms` + `npm run dev`, then open `/admin/`. Repo: github.com/synthezizer/portfolio2 (`main`), hosted as a Cloudflare **Worker** with static assets (`wrangler.jsonc`, serves `dist/`; live at dev.anarc.cc). Live CMS sign-in is GitHub OAuth handled by `worker/` on `/api/auth` + `/api/callback` (needs `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` on the Worker). It's a Worker, not Pages: a `functions/` folder would be ignored.
+**Content is managed by Decap CMS.** Projects live in `content/projects/*.json` (sorted by `order`), the contact page in `content/contact.json`, the about page in `content/about.json`; `src/content.js` loads them at build time. Admin UI: `public/admin/` (`config.yml` defines the fields). Local editing: `npm run cms` + `npm run dev`, then open `/admin/`. Repo: github.com/synthezizer/portfolio2 (`main`), hosted as a Cloudflare **Worker** with static assets (`wrangler.jsonc`, serves `dist/`; live at dev.anarc.cc). Live CMS sign-in is GitHub OAuth handled by `worker/` on `/api/auth` + `/api/callback` (needs `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` on the Worker). It's a Worker, not Pages: a `functions/` folder would be ignored. Live Discord status comes from the Lanyard WebSocket (`src/presence.js`), using `discord_id` in `content/about.json`; the account must have joined Lanyard's Discord server.
 
 ## Design Context
 
@@ -32,26 +32,35 @@ The source of truth is the two Figma frames (Projects, Contact), 1440 × 1024 on
 | `--orange` | #FF8D28 | Small star when Contact is active |
 
 **Typography:** Atkinson Hyperlegible Next only. Letter-spacing −0.06em throughout.
-- Display: SemiBold 96px, used for the nav labels (PROJECTS / CONTACT) and page headings.
+- Display: SemiBold 96px for page headings. The nav labels (PROJECTS / CONTACT / ABOUT) are SemiBold 70px, packed tightly and centered on the same 110px margins as the page content.
 - Body: Regular 40px, used for body copy, the "ANDY" wordmark and the page number.
 - Meta: Regular Italic 32px, used for dates (e.g. *10/25/2026*).
 - Sizes scale fluidly below 1440px with `clamp()` and keep these ratios. Body copy may relax tracking slightly (≈ −0.03em) and set line-height around 1.15 at small sizes so it stays readable, because the breakdown already flags the body as dense.
 
 **Layout anatomy (shared by both pages):**
-- **Top bar:** full-width black band about 90px tall. It holds a thin white horizontal line with a white dot and the "ANDY" wordmark at the right. The dot sits at the **left** end on Contact and the **right** end on Projects, so it works as a position indicator between the two pages.
+- **Top bar:** full-width black band about 90px tall. It holds a thin white horizontal line with a white dot and the "ANDY" wordmark at the right. The dot sits at the **left** end on Contact, the **right** end on Projects and the **middle** on About, so it works as a position indicator between the pages.
 - **Frame bracket:** a thick black rule (≈10px) running down the left edge and across the top of the content area. Its top rule ends at about x=700 on Projects (wrapping the project image) and about x=1230 on Contact (wrapping the whole nav).
-- **Nav row:** `PROJECTS ●● → CONTACT ★`. The active label is black with a colored icon, and the inactive label is gray with a gray icon. The arrow is always black. Icons: Projects uses two black circles with offset inner dots (red, blue), shown gray/white when inactive. Contact uses a large and a small star (yellow, orange), shown gray when inactive.
+- **Nav row:** `PROJECTS ●● → CONTACT ★ → ABOUT ●`. The active label is black with a colored icon, and the inactive label is gray with a gray icon. The arrows are always black and point away from the current page, toward the others. Icons: Projects uses two black circles with offset inner dots (red, blue), shown gray/white when inactive. Contact uses a large and a small star (yellow, orange), shown gray when inactive. About uses one circle whose inner dot carries live Discord status, shown gray when inactive.
 - **Projects page:** a large blue media block fills the left column (x≈44–700, bottom-bleeding). The right column has the title (96px), the date (italic 32px), body copy (40px) and a ◀ n ▶ pager at the bottom right.
 - **Contact page:** the heading "ways to reach me" and body on the left, a blue media block on the right.
+- **About page:** shares Contact's layout (text from x=110, media from x=830 to x=1330, heading at the same height), with a landscape media block and the Discord status below it. Contact's media also ends at x=1330, so both pages have equal 110px margins.
+- **Where I'm from:** under About's heading, a black location pin and "SEATTLE, WA" in semibold, wide-tracked capitals (0.26em). No flag.
+- **Stamps are never crushed:** the real sheet lives outside `.crushed` and is positioned over `.stamps--slot` by `syncStamps()`.
+- **Stamp corner:** the bottom-left of About holds a 3×2 sheet of classic 99×56 web stamps from `public/stamps/`, listed in `content/about.json`. Self-hosted, never hotlinked, shown only at whole-number sizes with hard pixels.
+- **Discord status colors:** online `#34C759`, idle `#FFCC00`, busy `#FF383C`, offline `#8E8E93`. Green is used only here. Always paired with the word, and hidden when the status can't be confirmed.
+- **Now listening:** when Discord reports music, About shows a pixelated Frutiger Aero media player under the status (`src/player.js`): painted at an exact 2x pixel scale, crushed to the 216 web-safe colors with Bayer dithering, scaled up with hard pixels, with the real song, a live clock and a moving seek bar. Keep it crunchy: no smooth vector rendering. It's a deliberate exception to the palette and type rules, a skeuomorphic sticker on the poster, and carries no real brand logos. Games show as a text line with the name and time played.
 - Every position snaps to the 10px grid.
+- Thin rules are 4px, not scaled: a whole number of 2px grid samples, or they land at uneven weights.
 - **Blue blocks are image slots** (project media and the contact media). Blue shows when there's no image, while one loads, or if it fails, and a loaded image fades in over it (`object-fit: cover`). Every real image needs alt text, and the media stays `aria-hidden` without one.
+
+**Bitcrush:** the whole site, text included, is deliberately not crisp: 10 color levels per channel, a 2px Bayer dither (`.crush`) and a 2px sample grid (`#bitcrush` SVG filter on `.crushed`), kept at 2px so small text survives; small screens drop the grid at rest (`#bitcrush-phone`) because it destroys their small text. The filter moves downward: the dither steps down one 2px cell at a time and a faint crushed band rolls down the page. On page switches `src/crush.js` springs it harder via `#bitcrush-spring` (elastic in, peak 3 levels and 9px blocks, elastic out). The cursor is a crosshair everywhere.
 
 **Anti-references:** generic dev-portfolio templates (hero + card grid + skill bars), gradients, drop shadows, rounded "SaaS" cards, glassmorphism, extra accent colors, a dark mode, and decorative motion that has no connection to the layout.
 
 **Motion (GSAP, expressive):**
 - Switching pages is the signature moment. The top-bar dot slides along its line, the frame bracket's top rule extends or retracts, the nav labels cross-fade between black and gray, the icons swap color with a pop or rotation (circles roll, stars spin in), and the content columns wipe or stagger in.
 - Project pager: the media block and text slide horizontally in the paging direction, and the number ticks over.
-- Micro-interactions: the shapes react on hover (inner dots orbit, stars twinkle or rotate) and the arrow nudges toward the inactive page.
+- Micro-interactions: stars rotate on hover. The circles' inner dots stay still: no cursor following or spinning.
 - Text reveals: headings come in line by line with a masked slide-up.
 - Easing is snappy and graphic (e.g. `power3`/`expo` outs, short overshoot on shapes) and never floaty.
 

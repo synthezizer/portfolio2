@@ -3,7 +3,7 @@
   "alt": "close-up of a ginger cat with amber eyes looking just past the camera",
   "credit": "photo: Fir0002, GFDL 1.2",
   "credit_url": "https://commons.wikimedia.org/wiki/File:Cat03.jpg",
-  "intro": "try email before discord!",
+  "intro": "i respond fastest if you send me a message request on discord.",
   "channels": [
     {
       "label": "email",
@@ -21,7 +21,8 @@
       "label": "discord",
       "value": ".ts.pmo_",
       "href": "",
-      "copy": true
+      "copy": true,
+      "show_status": true
     }
   ]
 }

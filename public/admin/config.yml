@@ -47,6 +47,35 @@ collections:
   - name: pages
     label: pages
     files:
+      - name: about
+        label: about
+        file: content/about.json
+        fields:
+          - { name: title, label: title, widget: string }
+          - { name: from, label: where i'm from, widget: string, required: false, hint: "the line under the title, shown in spaced capitals" }
+          - { name: body, label: about me, widget: text, required: false, hint: "leave a blank line between paragraphs" }
+          - { name: image, label: image, widget: image, required: false, choose_url: true }
+          - { name: alt, label: image description (alt text), widget: string, required: false }
+          - { name: credit, label: image credit, widget: string, required: false }
+          - { name: credit_url, label: credit link, widget: string, required: false }
+          - name: discord_id
+            label: discord user id
+            widget: string
+            required: false
+            pattern: ['^(\d{15,22})?$', "the long number from Copy User ID, not your username"]
+            hint: "Discord: turn on Developer Mode, right-click your name, Copy User ID. You must also join the Lanyard server: discord.gg/UrXF2cfJ7F. Empty hides the status."
+          - name: stamps
+            label: stamps
+            label_singular: stamp
+            widget: list
+            required: false
+            summary: "{{fields.alt}}"
+            hint: "classic 99x56 web stamps show best"
+            fields:
+              - { name: image, label: image, widget: image, hint: "kept on this site, not hotlinked" }
+              - { name: alt, label: description, widget: string }
+              - { name: href, label: link, widget: string, required: false, hint: "optional: makes the stamp clickable" }
+          - { name: show_activity, label: "show what i'm playing or listening to", widget: boolean, default: true, hint: "off shows only online / idle / busy / offline" }
       - name: contact
         label: contact
         file: content/contact.json
@@ -66,3 +95,4 @@ collections:
               - { name: value, label: value, widget: string, hint: "what's shown, e.g. hello@example.com" }
               - { name: href, label: link, widget: string, required: false, hint: "mailto:… or https://… (empty = plain text)" }
               - { name: copy, label: copy button, widget: boolean, default: false }
+              - { name: show_status, label: show live discord status, widget: boolean, default: false, required: false }

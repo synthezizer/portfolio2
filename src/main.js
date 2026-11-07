@@ -2,7 +2,10 @@ import { gsap } from "gsap";
 import { Flip } from "gsap/Flip";
 import { SplitText } from "gsap/SplitText";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
-import { projects as rawProjects, contact } from "./content.js";
+import { projects as rawProjects, about, contact } from "./content.js";
+import { watchPresence, describePresence, howLong } from "./presence.js";
+import { createPlayer } from "./player.js";
+import { crunch } from "./crush.js";
 
 gsap.registerPlugin(Flip, SplitText, ScrollToPlugin);
 
@@ -24,13 +27,18 @@ const dot = $(".topbar__dot");
 const bracketTop = $(".bracket__top");
 const bracketSide = $(".bracket__side");
 const curtain = $(".curtain");
-const views = { projects: $(".view--projects"), contact: $(".view--contact") };
+const views = { projects: $(".view--projects"), contact: $(".view--contact"), about: $(".view--about") };
 const links = $$(".nav__link");
-const arrow = $(".nav__arrow");
+const arrows = $$(".nav__arrow");
 const circles = $$(".circle");
 const circleInners = $$(".circle__inner");
 const circleOuters = $$(".circle__outer");
 const stars = $$(".star");
+const navEye = $(".icon--eye");
+const navEyeParts = $$(".eye__outer, .eye__inner", navEye);
+const presenceRoot = $(".presence");
+const stampSlot = $(".stamps--slot");
+const stampSheet = $(".stamps--real");
 const status = $("#status");
 
 const els = {
@@ -44,6 +52,9 @@ const els = {
   contactBody: $(".contact__body"),
   contactIntro: $(".contact__intro"),
   contactList: $(".contact__list"),
+  aboutTitle: $(".about__title"),
+  aboutPlace: $(".about__place"),
+  aboutBody: $(".about__body"),
 };
 
 /* ---------- motion language ---------- */
@@ -63,13 +74,17 @@ const PAGE_SWITCH = 1.05;
 // Masks clip ~0.2em past the glyph box (see --mask in CSS), so 110 would peek.
 const REVEAL = 135;
 
-// projects: top rule ends at x=700; contact: runs to x=1230
-const BRACKET = { projects: 676 / 1206, contact: 1 };
-// the arrow always points at the page you're not on
-const ARROW = { projects: 0, contact: 180 };
+// Nav order; decides which way the curtain sweeps.
+const ORDER = { projects: 0, contact: 1, about: 2 };
+// Each arrow points away from the current page, toward the others.
+const ARROW_ANGLES = [
+  { projects: 0, contact: 180, about: 180 },
+  { projects: 0, contact: 0, about: 180 },
+];
+const setArrowAngles = (v) => arrows.forEach((a, i) => gsap.set(a, { rotation: ARROW_ANGLES[i][v] }));
 
 // GSAP owns SVG transforms; spin each shape around its own center
-gsap.set([...circles, ...circleInners, ...stars, arrow], { transformOrigin: "50% 50%" });
+gsap.set([...circles, ...circleInners, ...stars, ...arrows, ...$$(".eye__group"), ...$$(".eye__inner")], { transformOrigin: "50% 50%" });
 
 /* ---------- data ---------- */
 
@@ -100,8 +115,19 @@ function viewFromHash() {
   return Object.hasOwn(views, h) ? h : null;
 }
 
+// Dot stops: Projects right, Contact left (from the frames), About in between.
 function dotX(v) {
-  return v === "projects" ? dot.parentElement.offsetWidth - dot.offsetWidth : 0;
+  const travel = dot.parentElement.offsetWidth - dot.offsetWidth;
+  return { projects: travel, contact: 0, about: travel / 2 }[v];
+}
+
+// The top rule wraps the active label; on desktop Projects it wraps the image (x=700).
+function bracketScale(v) {
+  if (compact.matches) return { projects: 676 / 1206, contact: 1, about: 1 }[v];
+  if (v === "projects") return 676 / 1206;
+  const link = links.find((a) => a.dataset.view === v);
+  const right = link.getBoundingClientRect().right - gsap.getProperty(link, "x");
+  return (right - bracketSide.getBoundingClientRect().left) / bracketTop.offsetWidth;
 }
 
 function announce(msg) {
@@ -144,7 +170,7 @@ const hideLines = (targets) =>
 
 /* ---------- scroll: only when the text truly doesn't fit ---------- */
 
-const scrollers = [els.body, els.contactBody].map((el) => {
+const scrollers = [els.body, els.contactBody, els.aboutBody].map((el) => {
   const ind = document.createElement("div");
   ind.className = "scroll-ind";
   ind.setAttribute("aria-hidden", "true");
@@ -203,6 +229,7 @@ function measureScroll() {
 function renderMedia(media, item) {
   const fill = media.querySelector(".media__fill");
   fill.replaceChildren();
+  fill.classList.remove("has-image");
   // a bare blue block is decorative; once it holds an image it's real content
   media.setAttribute("aria-hidden", "true");
   if (!item?.image) return;
@@ -211,16 +238,23 @@ function renderMedia(media, item) {
   const img = new Image();
   img.className = "media__img";
   img.alt = item.alt;
-  img.decoding = "async";
+  img.decoding = "sync"; // a hidden page's image must never paint a blank frame when it appears
+  const started = performance.now();
   img.addEventListener(
     "load",
-    () => (reduced() ? gsap.set(img, { opacity: 1 }) : gsap.to(img, { opacity: 1, duration: 0.7, ease: SETTLE })),
+    () => {
+      fill.classList.add("has-image"); // nothing blue behind a loaded photo
+      // Only a slow network earns a fade; otherwise the photo is simply there.
+      if (reduced() || performance.now() - started < 300) gsap.set(img, { opacity: 1 });
+      else gsap.to(img, { opacity: 1, duration: 0.7, ease: SETTLE });
+    },
     { once: true }
   );
   img.addEventListener(
     "error",
     () => {
       img.remove(); // fall back to the plain blue block
+      fill.classList.remove("has-image");
       credit?.remove();
       media.setAttribute("aria-hidden", "true");
     },
@@ -228,7 +262,11 @@ function renderMedia(media, item) {
   );
   gsap.set(img, { opacity: 0 });
   img.src = item.image;
-  if (img.complete && img.naturalWidth) gsap.set(img, { opacity: 1 }); // cached: no fade needed
+  img.decode?.().catch(() => {}); // decode ahead of time so that first paint costs nothing
+  if (img.complete && img.naturalWidth) {
+    fill.classList.add("has-image");
+    gsap.set(img, { opacity: 1 }); // cached: no fade needed
+  }
   fill.append(img);
 
   // licensed photos need attribution: a small tag in the corner
@@ -334,6 +372,7 @@ function renderContact() {
         val.append(note);
       }
     }
+    if (c.show_status) val.append(makeInlineStatus());
     row.append(name, val);
 
     if (c.copy) {
@@ -350,6 +389,149 @@ function renderContact() {
     return li;
   });
   els.contactList.replaceChildren(...items);
+}
+
+function renderAbout() {
+  renderMedia($(".media--about"), {
+    image: str(about?.image),
+    alt: str(about?.alt),
+    credit: str(about?.credit),
+    creditUrl: str(about?.credit_url),
+  });
+  els.aboutTitle.textContent = str(about?.title) || "about me";
+
+  els.aboutPlace.textContent = str(about?.from);
+  $(".about__from").hidden = !els.aboutPlace.textContent;
+
+  const paragraphs = str(about?.body)
+    .split(/\n\s*\n/)
+    .filter(Boolean)
+    .map((text) => Object.assign(document.createElement("p"), { textContent: text.trim() }));
+  els.aboutBody.replaceChildren(...paragraphs);
+  renderStamps();
+}
+
+function renderStamps() {
+  const list = stampSheet;
+  const stamps = (Array.isArray(about?.stamps) ? about.stamps : []).filter((s) => str(s?.image));
+  for (const el of [stampSlot, stampSheet]) {
+    el.hidden = !stamps.length;
+    el.classList.toggle("is-crowded", stamps.length > 6);
+  }
+  stampSlot.replaceChildren(
+    ...stamps.map(() => {
+      const li = document.createElement("li");
+      li.append(document.createElement("span"));
+      return li;
+    })
+  );
+  list.replaceChildren(
+    ...stamps.map((s) => {
+      const li = document.createElement("li");
+      const img = new Image(99, 56);
+      img.alt = str(s.alt);
+      img.src = str(s.image);
+      img.addEventListener("error", () => li.remove(), { once: true });
+      // reduced motion: hold animated stamps on their first frame
+      img.addEventListener(
+        "load",
+        () => {
+          if (!reduced()) return;
+          const still = document.createElement("canvas");
+          still.width = img.naturalWidth;
+          still.height = img.naturalHeight;
+          still.getContext("2d").drawImage(img, 0, 0);
+          still.setAttribute("role", "img");
+          still.setAttribute("aria-label", img.alt);
+          img.replaceWith(still);
+        },
+        { once: true }
+      );
+      const href = str(s.href);
+      if (href) {
+        const link = Object.assign(document.createElement("a"), { href, target: "_blank", rel: "noopener noreferrer" });
+        link.setAttribute("aria-label", `${img.alt} (opens in a new tab)`);
+        link.append(img);
+        li.append(link);
+      } else {
+        li.append(img);
+      }
+      return li;
+    })
+  );
+}
+
+/* ---------- discord status ---------- */
+
+const inlineStatuses = [];
+const player = createPlayer(reduced);
+$(".presence__row", presenceRoot).append(player.root);
+let activityTimer = 0;
+
+function makeInlineStatus() {
+  const root = document.createElement("span");
+  root.className = "status-inline";
+  root.hidden = true;
+  root.innerHTML = `<svg class="eye eye--live" viewBox="0 0 90 90" aria-hidden="true"><g class="eye__group"><circle class="eye__outer" cx="45" cy="45" r="45" /><circle class="eye__inner" cx="60" cy="60" r="22" /></g></svg><span class="status-inline__mask"><span class="status-inline__word"></span></span>`;
+  inlineStatuses.push(root);
+  return root;
+}
+
+function showPresence(p) {
+  // nothing confirmed: hide it rather than imply "offline"
+  if (p) navEye.dataset.status = p.status;
+  else delete navEye.dataset.status;
+
+  const wasHidden = presenceRoot.hidden;
+  presenceRoot.hidden = !p;
+  if (!p) clearInterval(activityTimer);
+  player.show(p?.music ?? null);
+  if (p) {
+    const activity = $(".presence__activity", presenceRoot);
+    const writeActivity = () => (activity.textContent = p.activity + (p.since ? ` for ${howLong(Date.now() - p.since)}` : ""));
+    writeActivity();
+    activity.hidden = !p.activity;
+    clearInterval(activityTimer);
+    if (p.since) activityTimer = setInterval(writeActivity, 30000);
+    paintStatus(presenceRoot, $(".presence__word", presenceRoot), p);
+    if (wasHidden && presenceRoot.offsetParent && !reduced()) gsap.from(presenceRoot, { autoAlpha: 0, duration: 0.5, clearProps: "all" });
+  }
+
+  for (const root of inlineStatuses) {
+    root.hidden = !p;
+    if (p) paintStatus(root, $(".status-inline__word", root), p);
+  }
+}
+
+function paintStatus(root, word, p) {
+  const eye = $(".eye", root);
+  if (eye.dataset.status === p.status && word.textContent === p.word) return;
+  eye.dataset.status = p.status;
+  rollText(word, p.word);
+}
+
+function startPresence() {
+  const id = str(about?.discord_id);
+  if (!/^\d{15,22}$/.test(id) || !("WebSocket" in window)) return; // empty or not a Discord user id
+  presenceRoot.hidden = false;
+  const showActivity = about?.show_activity !== false;
+  watchPresence(id, (data) => showPresence(describePresence(data, { showActivity })));
+}
+
+// A word rolls out through the top of its mask and the next rises from below.
+function rollText(label, word) {
+  if (label.textContent === word) return gsap.timeline();
+  if (reduced() || !label.offsetParent) {
+    gsap.killTweensOf(label);
+    gsap.set(label, { yPercent: 0 });
+    label.textContent = word;
+    return gsap.timeline();
+  }
+  return gsap
+    .timeline()
+    .to(label, { ...TEXT, yPercent: -REVEAL, duration: 0.25, ease: "power3.in" })
+    .call(() => (label.textContent = word))
+    .fromTo(label, { yPercent: REVEAL }, { ...TEXT, yPercent: 0, duration: 0.5, ease: SETTLE });
 }
 
 // "copy" rolls over to "copied" (or "oops"), then back.
@@ -379,19 +561,11 @@ async function copyValue(btn) {
   }
   announce(ok ? `copied ${text}` : `couldn't copy. ${text}`);
 
-  const swap = (word) =>
-    reduced()
-      ? gsap.timeline().call(() => (label.textContent = word))
-      : gsap
-          .timeline()
-          .to(label, { ...TEXT, yPercent: -REVEAL, duration: 0.25, ease: "power3.in" })
-          .call(() => (label.textContent = word))
-          .fromTo(label, { yPercent: REVEAL }, { ...TEXT, yPercent: 0, duration: 0.5, ease: SETTLE });
-
   gsap
     .timeline({ onComplete: () => delete btn.dataset.busy })
-    .add(swap(ok ? "copied" : "oops"))
-    .add(swap("copy"), "+=1.6");
+    .add(rollText(label, ok ? "copied" : "oops"))
+    .add(() => rollText(label, "copy"), "+=1.6")
+    .to({}, { duration: 0.8 });
 }
 
 // Rules draw across, then each row rises out of its own mask.
@@ -406,19 +580,46 @@ function rowsIn(rows) {
   return tl;
 }
 
+// The clean stamp sheet sits outside the crushed page, exactly over its slot in About.
+function syncStamps() {
+  const slot = stampSlot.getBoundingClientRect();
+  if (!slot.width) return; // on another page
+  const page = body.getBoundingClientRect();
+  Object.assign(stampSheet.style, {
+    position: "absolute",
+    left: `${slot.left - page.left + body.scrollLeft}px`,
+    top: `${slot.top - page.top + body.scrollTop}px`,
+    right: "auto",
+    bottom: "auto",
+    width: `${slot.width}px`,
+    height: `${slot.height}px`,
+  });
+}
+
 function setStatic(v) {
   body.dataset.view = v;
   for (const [name, el] of Object.entries(views)) el.hidden = name !== v;
   setCurrent(v);
   gsap.set(dot, { x: dotX(v) });
-  gsap.set(bracketTop, { scaleX: BRACKET[v] });
-  gsap.set(arrow, { rotation: ARROW[v] });
+  gsap.set(bracketTop, { scaleX: bracketScale(v) });
+  setArrowAngles(v);
+  syncStamps();
+  gsap.set(stampSheet, { autoAlpha: v === "about" ? 1 : 0 });
 }
 
 function viewContent(v) {
-  return v === "projects"
-    ? { text: [els.title, els.date, els.body], media: els.projectMedia, extra: els.pager.hidden ? [] : [els.pager], rows: [] }
-    : { text: [$(".contact__title"), els.contactIntro], media: $(".media--contact"), extra: [], rows: $$(".contact__item") };
+  if (v === "projects") {
+    return { text: [els.title, els.date, els.body], media: els.projectMedia, extra: els.pager.hidden ? [] : [els.pager], rows: [] };
+  }
+  if (v === "contact") {
+    return { text: [$(".contact__title"), els.contactIntro], media: $(".media--contact"), extra: [], rows: $$(".contact__item", views.contact) };
+  }
+  return {
+    text: [els.aboutTitle, els.aboutPlace, ...els.aboutBody.children],
+    media: $(".media--about"),
+    extra: [$(".about__pin")].filter((el) => !el.closest("[hidden]")),
+    rows: presenceRoot.hidden ? [] : [presenceRoot],
+  };
 }
 
 // After any transition: re-measure, and make sure the page matches the URL
@@ -427,6 +628,7 @@ function settle() {
   busy = false;
   gsap.set(dot, { x: dotX(view) });
   measureScroll();
+  syncStamps();
   const wanted = viewFromHash() ?? "projects";
   if (wanted !== view) go(wanted);
 }
@@ -454,13 +656,15 @@ function intro() {
     .from(bracketSide, { scaleY: 0, duration: 1.1, ease: GLIDE }, 0.15)
     .from(bracketTop, { scaleX: 0, duration: 1.1, ease: GLIDE }, 0.3)
     .from(".nav__word", { ...TEXT, yPercent: REVEAL, duration: 1.1, stagger: 0.12 }, 0.5)
-    .from(circles, { scale: 0, rotation: -200, duration: 1.1, stagger: 0.08, ease: "back.out(1.4)" }, 0.75)
-    .from(arrow, { scale: 0, rotation: `-=180`, duration: 1, ease: SETTLE }, 0.85)
+    .from(circles, { scale: 0, duration: 1.1, stagger: 0.08, ease: "back.out(1.4)" }, 0.75)
+    .from(arrows, { scale: 0, rotation: `-=180`, duration: 1, stagger: 0.1, ease: SETTLE }, 0.85)
+    .from($(".eye__group", navEye), { scale: 0, duration: 1.1, ease: "back.out(1.4)" }, 1.1)
     .from(stars, { scale: 0, rotation: -144, duration: 1.1, stagger: 0.1, ease: "back.out(1.8)" }, 0.95)
     .from(content.media, { clipPath: "inset(100% 0 0 0)", duration: 1.2, ease: GLIDE, clearProps: "clipPath" }, 0.5)
     .add(revealLines(content.text), 0.95)
     .add(rowsIn(content.rows), 1.1)
     .from(content.extra, { autoAlpha: 0, y: 20, duration: 0.8, clearProps: "all" }, 1.3);
+  if (view === "about") tl.fromTo(stampSheet, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.8 }, 1.3);
 }
 
 /* ---------- view switch: one gesture ---------- */
@@ -470,9 +674,10 @@ function intro() {
 
 function placeCurtain() {
   const s = stage.getBoundingClientRect();
+  const side = bracketSide.getBoundingClientRect();
   const top = nav.getBoundingClientRect().bottom - s.top + 8;
-  const left = bracketSide.getBoundingClientRect().right - s.left;
-  gsap.set(curtain, { top, left, right: 0, bottom: 0, width: "auto", height: "auto" });
+  const left = side.right - s.left;
+  gsap.set(curtain, { top, left, right: 0, bottom: Math.max(0, s.bottom - side.bottom), width: "auto", height: "auto" });
 }
 
 function go(next) {
@@ -480,7 +685,7 @@ function go(next) {
   const prev = view;
   view = next;
   setCurrent(next);
-  announce(next === "projects" ? "projects" : "contact");
+  announce(next);
 
   if (reduced()) {
     busy = true;
@@ -497,23 +702,45 @@ function go(next) {
   }
 
   busy = true;
+  // The next photo must be ready to paint before anything moves (never longer than a beat).
+  const img = $(".media__img", viewContent(next).media);
+  const ready = img?.complete && img.naturalWidth ? img.decode().catch(() => {}) : null;
+  Promise.race([ready, new Promise((r) => setTimeout(r, ready ? 150 : 0))]).then(() => switchView(prev, next));
+}
+
+function switchView(prev, next) {
   const out = viewContent(prev);
   const into = viewContent(next);
-  const dir = next === "contact" ? 1 : -1;
+  const dir = ORDER[next] > ORDER[prev] ? 1 : -1;
   const D = PAGE_SWITCH;
   const HALF = 0.42;
+  crunch(HALF);
 
   // Snapshot what's changing before the DOM moves.
   const heroState = Flip.getState(out.media);
-  const colorTargets = [...links, ...circleOuters, ...circleInners, ...stars];
+  const colorTargets = [...links, ...circleOuters, ...circleInners, ...stars, ...navEyeParts];
   const before = colorTargets.map((el) => getComputedStyle(el)[el instanceof SVGElement ? "fill" : "color"]);
   placeCurtain();
+
+  // Stamps sit above the curtain, so they leave first and arrive once it has cleared.
+  if (prev === "about") gsap.to(stampSheet, { autoAlpha: 0, duration: 0.15, ease: "power2.out" });
 
   // Both pages exist for the first half; new text waits behind its masks.
   body.dataset.view = next;
   views[next].hidden = false;
   gsap.set(out.media, { visibility: "hidden" });
   gsap.set(into.extra, { autoAlpha: 0 });
+
+  // The outgoing photo itself rides in the flying block and cross-fades into the
+  // new one. Moved, not cloned: a clone is a new image that can paint a blank frame.
+  const outFill = $(".media__fill", out.media);
+  const outImg = $(".media__img", outFill);
+  const ghost = document.createElement("div");
+  ghost.className = "media__ghost";
+  if (outImg) ghost.append(outImg);
+  else ghost.classList.add("media__ghost--blank");
+  into.media.append(ghost);
+
   measureScroll(); // before splitting: offset lines would inflate the measurement
   const reveal = revealLines(into.text, { stagger: 0.045 }).pause();
   const rows = rowsIn(into.rows).pause();
@@ -522,6 +749,8 @@ function go(next) {
     defaults: { ease: GLIDE },
     onComplete: () => {
       gsap.set([out.media, curtain], { clearProps: "visibility,display,transform" });
+      if (outImg) outFill.prepend(outImg);
+      ghost.remove();
       settle();
     },
   });
@@ -539,17 +768,20 @@ function go(next) {
     0
   );
 
-  // curtain: leading edge accelerates across, trailing edge decelerates away
+  tl.to(ghost, { opacity: 0, duration: 0.6, ease: "power2.inOut" }, 0.12);
+
+  // curtain: leading edge accelerates across, trailing edge decelerates away.
+  // power2 so it's already moving in the first frames, in step with everything else.
   tl.set(curtain, { display: "block", scaleX: 0, transformOrigin: dir > 0 ? "0% 50%" : "100% 50%" }, 0)
-    .to(curtain, { scaleX: 1, duration: HALF, ease: "power3.in" }, 0)
+    .to(curtain, { scaleX: 1, duration: HALF, ease: "power2.in" }, 0)
     .add(() => (views[prev].hidden = true), HALF) // swap happens fully covered
     .set(curtain, { transformOrigin: dir > 0 ? "100% 50%" : "0% 50%" }, HALF)
-    .to(curtain, { scaleX: 0, duration: D - HALF, ease: "power3.out" }, HALF);
+    .to(curtain, { scaleX: 0, duration: D - HALF, ease: "power2.out" }, HALF);
 
   // chrome rides the same curve
   tl.to(dot, { x: () => dotX(next), duration: D }, 0)
-    .to(bracketTop, { scaleX: BRACKET[next], duration: D }, 0)
-    .to(arrow, { rotation: ARROW[next], duration: D }, 0);
+    .to(bracketTop, { scaleX: bracketScale(next), duration: D }, 0);
+  arrows.forEach((a, i) => tl.to(a, { rotation: ARROW_ANGLES[i][next], duration: D }, 0));
 
   // colors cross-fade from the captured values to the CSS truth
   colorTargets.forEach((el, i) => {
@@ -558,10 +790,13 @@ function go(next) {
   });
 
   // one small flourish on the icon you've arrived at
-  if (next === "projects") {
-    tl.fromTo(circles, { rotation: -360 }, { rotation: 0, duration: D, stagger: 0.06 }, 0);
-  } else {
+  if (next === "contact") {
     tl.fromTo(stars, { rotation: -144, scale: 0.6 }, { rotation: 0, scale: 1, duration: D, stagger: 0.06 }, 0);
+  }
+
+  if (next === "about") {
+    syncStamps();
+    tl.fromTo(stampSheet, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.45, ease: SETTLE }, D - 0.25);
   }
 
   // new text rises as the curtain clears
@@ -605,37 +840,7 @@ function page(step) {
     .fromTo(els.digit, { yPercent: REVEAL * step }, { ...TEXT, yPercent: 0, duration: 0.7, ease: SETTLE }, 0.45);
 }
 
-/* ---------- pointer life: pupils + magnets ---------- */
-
-function pupils() {
-  // inner dots rest offset from center (red looks right, blue looks down);
-  // they swing to look at the cursor, staying inside their circle
-  const svg = $(".icon--circles");
-  const eyes = [
-    { el: $(".circle__inner--red"), cx: 45, rest: { x: 21, y: 0 } },
-    { el: $(".circle__inner--blue"), cx: 145, rest: { x: 0, y: 21 } },
-  ].map((e) => ({
-    ...e,
-    qx: gsap.quickTo(e.el, "x", { duration: 0.6, ease: "power3.out" }),
-    qy: gsap.quickTo(e.el, "y", { duration: 0.6, ease: "power3.out" }),
-  }));
-  const REACH = 21;
-
-  window.addEventListener("pointermove", (e) => {
-    if (reduced()) return;
-    const r = svg.getBoundingClientRect();
-    const unit = r.width / 190; // px per svg unit
-    for (const eye of eyes) {
-      const dx = (e.clientX - (r.left + eye.cx * unit)) / unit;
-      const dy = (e.clientY - (r.top + 45 * unit)) / unit;
-      const dist = Math.hypot(dx, dy) || 1;
-      const reach = Math.min(REACH, dist / 3);
-      eye.qx((dx / dist) * reach - eye.rest.x);
-      eye.qy((dy / dist) * reach - eye.rest.y);
-    }
-  });
-  document.documentElement.addEventListener("pointerleave", () => eyes.forEach((e) => (e.qx(0), e.qy(0))));
-}
+/* ---------- pointer life ---------- */
 
 // Gentle pull toward the cursor. Kept small and wobble-free on purpose: big
 // type swimming around (or springing back elastically) reads as seasick.
@@ -661,7 +866,6 @@ function magnet(el, { strength, reach, max, vertical = true }) {
 
 function hovers() {
   if (finePointer.matches) {
-    pupils();
     // only the labels lean; arrows stay put
     links.forEach((a) => magnet(a, { strength: 0.03, reach: 24, max: 4, vertical: false }));
   }
@@ -682,6 +886,10 @@ function nextTurn(step) {
 
 renderProject();
 renderContact();
+renderAbout();
+startPresence();
+// anything that resizes About (the player appearing, its canvas fitting) can move the stamp slot
+new ResizeObserver(syncStamps).observe(views.about);
 
 els.contactList.addEventListener("click", (e) => {
   const btn = e.target instanceof Element && e.target.closest(".contact__copy");
@@ -707,7 +915,9 @@ window.addEventListener("resize", () => {
   resizeFrame = requestAnimationFrame(() => {
     if (busy) return;
     gsap.set(dot, { x: dotX(view) });
+    gsap.set(bracketTop, { scaleX: bracketScale(view) });
     measureScroll();
+    syncStamps();
   });
 });
 
